@@ -31,7 +31,6 @@ do_ins ()
     do
         if [ -d $f ];then
             plug_name=${f##*/}
-            echo $plug_name
             echo -n "Install plugin <$plug_name>(y/n)? : y " 
             read c
             if [ -z $c -o "y"="$c" ];then
