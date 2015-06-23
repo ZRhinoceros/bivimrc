@@ -4,8 +4,53 @@ PROG_NAME="bivimrc"
 COMMAND_NAME=""  # Personal vim command 
 INSTALL_PATH="$HOME"  # Install path,default $HOME
 VIM_EXE="`which vim`"  # Vim file fullpath
-CP=cp
+PLUG_ROOT="plugins"
 
+#Help functions
+setup_base ()
+{
+    bivimrc_home=$1
+
+    mkdir -p $bivimrc_home
+    cp -R vimrc $bivimrc_home
+    cp -R viminfo $bivimrc_home
+    cp -R vim $bivimrc_home
+    cp -R runtime $bivimrc_home
+
+    return 0
+}
+
+do_ins ()
+{
+    plug_root=$1
+    plug_home=$2
+
+    cd $plug_root
+
+    for f in ./*
+    do
+        if [ -d $f ];then
+            plug_name=${f##*/}
+            echo $plug_name
+            echo -n "Install plugin <$plug_name>(y/n)? : y " 
+            read c
+            if [ -z $c -o "y"="$c" ];then
+                cd $f
+                chmod +x ins.sh
+                . ins.sh $plug_home
+                if [ 0 -ne $? ];then
+                    echo "Install vim plugin <$plug_name> failed"
+                    return -1
+                fi
+                cd ..
+            fi
+        fi
+    done
+
+    cd ..
+
+    return 0
+}
 
 IF_ERROR_RET='if [ $? -ne 0 ];then exit -1;fi'
 
@@ -51,44 +96,25 @@ fi
 eval $IF_ERROR_RET
 echo -e "\tUsed system vim  : $VIM_EXE"
 
-#Copy vim resource
-
-BIVIMRC_ROOT="$INSTALL_PATH/$PROG_NAME"
-VIM_RT_ROOT="$BIVIMRC_ROOT/vim"
-BUNDLE_ROOT="$VIM_RT_ROOT/bundle"
+BIVIMRC_HOME="$INSTALL_PATH/$PROG_NAME"
+VIM_RT_ROOT="$BIVIMRC_HOME/vim"
+PLUG_HOME="$VIM_RT_ROOT/bundle"
 PREFIX_PLUGIN="plugins"
-echo -n "Step-3: Enter your vim path ($VIM_EXE): "
-echo "Step-4: Copy vim resource"
-mkdir -p $BIVIMRC_ROOT
 
-cp -v vimrc $BIVIMRC_ROOT
-cp -v viminfo $BIVIMRC_ROOT
-cp -vR vim $BIVIMRC_ROOT
-cp -vR runtime $BIVIMRC_ROOT
+#Install basic vim resource
+echo -e "Step-3\tInstall VIM basic resource"
+setup_base $BIVIMRC_HOME
+eval $IF_ERROR_RET
 
-# Install taglist
-PLUG_NAME=taglist
-PLUG_TARBALL=taglist.tar.gz
-PLUG_DEST="$BUNDLE_ROOT/$PLUG_NAME"
-PLUG_SRC="$PREFIX_PLUGIN/$PLUG_TARBALL"
-mkdir -p $PLUG_DEST
-tar xzvf $PLUG_SRC -C $PLUG_DEST
-echo -e "\t INSTALL $PLUG_NAME SUCCESS\n"
-
-# Install tagbar 
-PLUG_NAME=tagbar
-PLUG_SUFFIX=tar.gz
-PLUG_TARBALL="$PLUG_NAME.$PLUG_SUFFIX"
-PLUG_DEST="$BUNDLE_ROOT/$PLUG_NAME"
-PLUG_SRC="$PREFIX_PLUGIN/$PLUG_TARBALL"
-mkdir -p $PLUG_DEST
-tar xzvf $PLUG_SRC -C $PLUG_DEST
-echo -e "\t INSTALL $PLUG_NAME SUCCESS\n"
+# Install plugins
+echo -e "Step-4:\tInstall VIM Plugins"
+do_ins $PLUG_ROOT $PLUG_HOME
+eval $IF_ERROR_RET
 
 #Construct new vim
-SET_ENV="VIM_RUNTIME=$BIVIMRC_ROOT"
+SET_ENV="VIM_RUNTIME=$BIVIMRC_HOME"
 SET_RT_PATH='set runtimepath=$VIM_RUNTIME,$VIM_RUNTIME/vim,$VIM_RUNTIME/runtime'
-VIM_COMMAND="$VIM_EXE -u $BIVIMRC_ROOT/vimrc -i $BIVIMRC_ROOT/viminfo --cmd"
+VIM_COMMAND="$VIM_EXE -u $BIVIMRC_HOME/vimrc -i $BIVIMRC_HOME/viminfo --cmd"
 alias $COMMAND_NAME="$SET_ENV;$VIM_COMMAND \"$SET_RT_PATH\""
 
 #Set envioment alias
